@@ -26,11 +26,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
-  Check
+  Check,
+  Camera
 } from 'lucide-react';
 import api from '../../services/api';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
+import CameraCaptureModal from '../../components/common/CameraCaptureModal';
 import { useToast } from '../../components/common/Toast';
 
 const memberSchema = z.object({
@@ -107,7 +109,12 @@ export const MembersPage = () => {
   // Image Upload state for Edit Member
   const [editImageFile, setEditImageFile] = useState(null);
   const [editImagePreview, setEditImagePreview] = useState('');
+  const [editUploadedImageUrl, setEditUploadedImageUrl] = useState('');
   const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
+
+  // Live Camera Capture state
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [cameraTarget, setCameraTarget] = useState('add'); // 'add' or 'edit'
 
   // Credentials & Password Visibility states
   const [revealedPasswords, setRevealedPasswords] = useState({});
@@ -268,11 +275,43 @@ export const MembersPage = () => {
     }
   };
 
+  // Handle Live Camera Snapshot upload to Cloudinary
+  const handleLivePhotoCapture = async (dataUri) => {
+    try {
+      if (cameraTarget === 'add') {
+        setImagePreview(dataUri);
+        setIsUploadingImage(true);
+        const res = await api.post('/uploads/image', { image: dataUri, folder: 'members' });
+        const url = res.data?.data?.imageUrl || res.data?.data?.url;
+        if (url) {
+          setUploadedImageUrl(url);
+          toastSuccess('Live Photo Uploaded', 'Photo compressed and saved to Cloudinary');
+        }
+      } else if (cameraTarget === 'edit') {
+        setEditImagePreview(dataUri);
+        setIsUploadingEditImage(true);
+        const res = await api.post('/uploads/image', { image: dataUri, folder: 'members' });
+        const url = res.data?.data?.imageUrl || res.data?.data?.url;
+        if (url) {
+          setEditUploadedImageUrl(url);
+          setEditImageFile(null);
+          toastSuccess('Live Photo Uploaded', 'Photo compressed and saved to Cloudinary');
+        }
+      }
+    } catch (err) {
+      toastError('Camera upload failed', err.response?.data?.message || 'Could not upload live photo');
+    } finally {
+      setIsUploadingImage(false);
+      setIsUploadingEditImage(false);
+    }
+  };
+
   // Open Edit Member Modal
   const openEditModal = (member) => {
     setEditingMember(member);
     setEditImagePreview(member.profileImageUrl || '');
     setEditImageFile(null);
+    setEditUploadedImageUrl('');
     resetEdit({
       name: member.userId?.name || '',
       email: member.userId?.email || '',
@@ -302,7 +341,7 @@ export const MembersPage = () => {
     if (!editingMember) return;
     setIsUploadingEditImage(true);
     try {
-      let finalImageUrl = editingMember.profileImageUrl || '';
+      let finalImageUrl = editUploadedImageUrl || editingMember.profileImageUrl || '';
       if (editImageFile) {
         const formDataImg = new FormData();
         formDataImg.append('image', editImageFile);
@@ -855,18 +894,31 @@ export const MembersPage = () => {
             </div>
 
             <div className="flex-1">
-              <label className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-colors">
-                <Upload className="w-3.5 h-3.5" />
-                <span>Upload Profile Picture</span>
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-colors">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload File</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCameraTarget('add');
+                    setIsCameraModalOpen(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer"
+                >
+                  <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Take Live Photo</span>
+                </button>
+              </div>
               {isUploadingImage && <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">Uploading image...</p>}
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Max size 5MB (JPEG, PNG, WebP). Optional.</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Upload JPEG/PNG/WebP or snap a live photo with camera. Compressed via Cloudinary.</p>
             </div>
           </div>
 
@@ -1355,16 +1407,29 @@ export const MembersPage = () => {
                 </div>
               )}
               <div className="flex-1">
-                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-colors">
-                  <Upload className="w-3.5 h-3.5" />
-                  <span>Change Profile Photo</span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handleEditImageChange}
-                    className="hidden"
-                  />
-                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-colors">
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload File</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleEditImageChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCameraTarget('edit');
+                      setIsCameraModalOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-bold text-xs rounded-xl shadow-sm transition-colors cursor-pointer"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Take Live Photo</span>
+                  </button>
+                </div>
                 {isUploadingEditImage && <p className="text-xs text-emerald-600 mt-1">Uploading new photo...</p>}
               </div>
             </div>
@@ -1692,6 +1757,14 @@ export const MembersPage = () => {
           </div>
         )}
       </Modal>
+
+      {/* LIVE CAMERA CAPTURE MODAL */}
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={handleLivePhotoCapture}
+        title={cameraTarget === 'add' ? 'Take Member Profile Photo' : 'Update Member Photo via Camera'}
+      />
     </div>
   );
 };

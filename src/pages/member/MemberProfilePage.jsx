@@ -6,6 +6,7 @@ import { User, Phone, MapPin, Lock, Save, ShieldCheck, KeyRound, Copy, Check, Ca
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/common/Toast';
+import CameraCaptureModal from '../../components/common/CameraCaptureModal';
 
 const profileSchema = z.object({
   phone: z.string().min(7, 'Phone number must be at least 7 characters'),
@@ -34,6 +35,7 @@ export const MemberProfilePage = () => {
   const [memberDbId, setMemberDbId] = useState('');
   const [profileImageUrl, setProfileImageUrl] = useState('');
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [copiedId, setCopiedId] = useState(false);
 
@@ -119,6 +121,25 @@ export const MemberProfilePage = () => {
       }
     } catch (err) {
       toastError('Upload Failed', err.response?.data?.message || err.message);
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
+
+  const handleCameraCapture = async (dataUri) => {
+    setIsUploadingPhoto(true);
+    try {
+      const uploadRes = await api.post('/uploads/image', { image: dataUri, folder: 'members' });
+      const newImageUrl = uploadRes.data?.data?.imageUrl || uploadRes.data?.data?.url;
+      if (newImageUrl) {
+        setProfileImageUrl(newImageUrl);
+        if (memberDbId) {
+          await api.put(`/members/${memberDbId}`, { profileImageUrl: newImageUrl });
+          toastSuccess('Photo Updated', 'Your profile picture has been saved.');
+        }
+      }
+    } catch (err) {
+      toastError('Camera Upload Failed', err.response?.data?.message || err.message);
     } finally {
       setIsUploadingPhoto(false);
     }
@@ -228,12 +249,22 @@ export const MemberProfilePage = () => {
             </div>
             <div>
               <p className="font-bold text-xs text-slate-900 dark:text-white">Profile Photo</p>
-              <p className="text-[10px] text-slate-400">Stored on MongoDB Atlas</p>
-              <label className="mt-1.5 inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm">
-                <Camera className="w-3.5 h-3.5" />
-                <span>{profileImageUrl ? 'Change' : 'Upload'}</span>
-                <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-              </label>
+              <p className="text-[10px] text-slate-400">Compressed & delivered via Cloudinary CDN</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-sm">
+                  <Upload className="w-3.5 h-3.5" />
+                  <span>Upload File</span>
+                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCameraModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                >
+                  <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Take Selfie</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -399,6 +430,14 @@ export const MemberProfilePage = () => {
           </form>
         </div>
       </div>
+
+      {/* Live Selfie Camera Modal */}
+      <CameraCaptureModal
+        isOpen={isCameraModalOpen}
+        onClose={() => setIsCameraModalOpen(false)}
+        onCapture={handleCameraCapture}
+        title="Take Profile Selfie"
+      />
     </div>
   );
 };
