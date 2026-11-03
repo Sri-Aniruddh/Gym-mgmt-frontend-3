@@ -27,11 +27,13 @@ import {
   ChevronRight,
   Copy,
   Check,
-  Camera
+  Camera,
+  Trash2
 } from 'lucide-react';
 import api from '../../services/api';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
+import AvatarImage from '../../components/common/AvatarImage';
 import CameraCaptureModal from '../../components/common/CameraCaptureModal';
 import { useToast } from '../../components/common/Toast';
 
@@ -334,6 +336,37 @@ export const MembersPage = () => {
     if (!file) return;
     setEditImageFile(file);
     setEditImagePreview(URL.createObjectURL(file));
+
+    setIsUploadingEditImage(true);
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('folder', 'members');
+
+    try {
+      const res = await api.post('/uploads/image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      const url = res.data?.data?.imageUrl || res.data?.data?.url;
+      if (url) {
+        setEditUploadedImageUrl(url);
+        setEditImagePreview(url);
+        setEditImageFile(null);
+        toastSuccess('Profile picture uploaded!');
+      }
+    } catch (err) {
+      toastError('Image upload note', err.response?.data?.message || 'Will upload upon save');
+    } finally {
+      setIsUploadingEditImage(false);
+    }
+  };
+
+  // Remove Photo handler for Edit Member
+  const handleRemoveEditPhoto = () => {
+    setEditImagePreview('');
+    setEditUploadedImageUrl('REMOVE');
+    setEditImageFile(null);
+    setEditingMember((prev) => (prev ? { ...prev, profileImageUrl: '' } : null));
+    toastInfo('Profile picture removed. Click save to update.');
   };
 
   // Submit Edit Member
@@ -341,8 +374,11 @@ export const MembersPage = () => {
     if (!editingMember) return;
     setIsUploadingEditImage(true);
     try {
-      let finalImageUrl = editUploadedImageUrl || editingMember.profileImageUrl || '';
-      if (editImageFile) {
+      let finalImageUrl = editUploadedImageUrl === 'REMOVE'
+        ? ''
+        : (editUploadedImageUrl || editingMember.profileImageUrl || '');
+
+      if (editImageFile && editUploadedImageUrl !== 'REMOVE') {
         const formDataImg = new FormData();
         formDataImg.append('image', editImageFile);
         formDataImg.append('folder', 'members');
@@ -592,18 +628,12 @@ export const MembersPage = () => {
                       {/* Member Info */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          {m.profileImageUrl ? (
-                            <img
-                              src={m.profileImageUrl}
-                              alt={m.userId?.name}
-                              className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs border border-emerald-200 dark:border-emerald-800">
-                              {m.userId?.name?.charAt(0) || 'M'}
-                            </div>
-                          )}
+                          <AvatarImage
+                            src={m.profileImageUrl}
+                            alt={m.userId?.name}
+                            fallbackText={m.userId?.name}
+                            className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
+                          />
                           <div>
                             <p className="font-bold text-slate-900 dark:text-white text-sm">{m.userId?.name}</p>
                             <p className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{m.memberId}</p>
@@ -740,18 +770,13 @@ export const MembersPage = () => {
                 <div key={m._id} className="p-4 space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {m.profileImageUrl ? (
-                        <img
-                          src={m.profileImageUrl}
-                          alt={m.userId?.name}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs border border-emerald-200 dark:border-emerald-800">
-                          {m.userId?.name?.charAt(0) || 'M'}
-                        </div>
-                      )}
+                      <AvatarImage
+                        src={m.profileImageUrl}
+                        alt={m.userId?.name}
+                        fallbackText={m.userId?.name}
+                        className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
+                        fallbackClassName="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs border border-emerald-200 dark:border-emerald-800 shrink-0"
+                      />
                       <div>
                         <p className="font-bold text-slate-900 dark:text-white text-sm">{m.userId?.name}</p>
                         <p className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{m.memberId}</p>
@@ -880,17 +905,13 @@ export const MembersPage = () => {
           {/* Profile Picture Upload & Preview */}
           <div className="flex items-center gap-5 p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
             <div className="relative">
-              {imagePreview ? (
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500 shadow-md"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400">
-                  <UserPlus className="w-7 h-7" />
-                </div>
-              )}
+              <AvatarImage
+                src={imagePreview}
+                alt="Member Preview"
+                fallbackText="+"
+                className="w-16 h-16 rounded-xl object-cover border-2 border-emerald-500 shadow-md"
+                fallbackClassName="w-16 h-16 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center text-slate-400"
+              />
             </div>
 
             <div className="flex-1">
@@ -1129,17 +1150,13 @@ export const MembersPage = () => {
           <div className="space-y-6">
             {/* Top Identity Header */}
             <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
-              {selectedMember.profileImageUrl ? (
-                <img
-                  src={selectedMember.profileImageUrl}
-                  alt={selectedMember.userId?.name}
-                  className="w-14 h-14 rounded-2xl object-cover border border-slate-200 dark:border-slate-700"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black flex items-center justify-center text-lg border border-emerald-200 dark:border-emerald-800">
-                  {selectedMember.userId?.name?.charAt(0) || 'M'}
-                </div>
-              )}
+              <AvatarImage
+                src={selectedMember.profileImageUrl}
+                alt={selectedMember.userId?.name}
+                fallbackText={selectedMember.userId?.name}
+                className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-md shrink-0"
+                fallbackClassName="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-black flex items-center justify-center text-lg border border-emerald-200 dark:border-emerald-800 shrink-0"
+              />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-lg font-black text-slate-900 dark:text-white">{selectedMember.userId?.name}</h3>
@@ -1395,17 +1412,13 @@ export const MembersPage = () => {
           <form onSubmit={handleSubmitEdit(onEditMemberSubmit)} className="space-y-4">
             {/* Image Preview & Change */}
             <div className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-              {editImagePreview ? (
-                <img
-                  src={editImagePreview}
-                  alt="Preview"
-                  className="w-14 h-14 rounded-xl object-cover border-2 border-emerald-500 shadow-sm"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500 text-lg">
-                  {editingMember.userId?.name?.charAt(0) || 'M'}
-                </div>
-              )}
+              <AvatarImage
+                src={editImagePreview}
+                alt={editingMember.userId?.name}
+                fallbackText={editingMember.userId?.name}
+                className="w-14 h-14 rounded-xl object-cover border-2 border-emerald-500 shadow-sm shrink-0"
+                fallbackClassName="w-14 h-14 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center font-bold text-slate-500 text-lg shrink-0"
+              />
               <div className="flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-sm cursor-pointer transition-colors">
@@ -1429,6 +1442,17 @@ export const MembersPage = () => {
                     <Camera className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Take Live Photo</span>
                   </button>
+                  {editImagePreview && (
+                    <button
+                      type="button"
+                      onClick={handleRemoveEditPhoto}
+                      title="Remove profile photo"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 font-bold text-xs rounded-xl border border-rose-200 dark:border-rose-800/40 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
+                    </button>
+                  )}
                 </div>
                 {isUploadingEditImage && <p className="text-xs text-emerald-600 mt-1">Uploading new photo...</p>}
               </div>

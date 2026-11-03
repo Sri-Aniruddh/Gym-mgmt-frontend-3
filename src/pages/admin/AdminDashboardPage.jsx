@@ -32,6 +32,7 @@ import {
 } from 'recharts';
 import api from '../../services/api';
 import Badge from '../../components/common/Badge';
+import AvatarImage from '../../components/common/AvatarImage';
 
 const PIE_COLORS = ['#059669', '#0284c7', '#eab308', '#8b5cf6', '#f43f5e'];
 
@@ -361,9 +362,13 @@ export const AdminDashboardPage = () => {
                   <tr key={m._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
                     <td className="py-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs">
-                          {m.userId?.name?.charAt(0) || 'M'}
-                        </div>
+                        <AvatarImage
+                          src={m.profileImageUrl}
+                          alt={m.userId?.name}
+                          fallbackText={m.userId?.name}
+                          className="w-7 h-7 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
+                          fallbackClassName="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs shrink-0"
+                        />
                         <div>
                           <p className="font-bold text-slate-900 dark:text-white">{m.userId?.name}</p>
                           <p className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">{m.memberId}</p>

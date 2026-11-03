@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/common/Toast';
 import CameraCaptureModal from '../../components/common/CameraCaptureModal';
+import AvatarImage from '../../components/common/AvatarImage';
 
 const profileSchema = z.object({
   phone: z.string().min(7, 'Phone number must be at least 7 characters'),
@@ -230,17 +231,13 @@ export const MemberProfilePage = () => {
           {/* Profile Picture Upload Section */}
           <div className="flex items-center gap-4 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
             <div className="relative">
-              {profileImageUrl ? (
-                <img
-                  src={profileImageUrl}
-                  alt="Profile"
-                  className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm"
-                />
-              ) : (
-                <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-black text-lg flex items-center justify-center">
-                  {user?.name?.charAt(0) || 'M'}
-                </div>
-              )}
+              <AvatarImage
+                src={profileImageUrl}
+                alt="Profile"
+                fallbackText={user?.name || 'M'}
+                className="w-14 h-14 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm"
+                fallbackClassName="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-black text-lg flex items-center justify-center shadow-sm"
+              />
               {isUploadingPhoto && (
                 <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
                   <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />

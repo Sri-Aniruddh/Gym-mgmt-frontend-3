@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Search, UserCheck, X, Check, AlertCircle, Loader2 } from 'lucide-react';
 import api from '../../services/api';
 import Badge from './Badge';
+import AvatarImage from './AvatarImage';
 
 export const MemberSearchSelect = ({
   selectedMember,
@@ -81,17 +82,13 @@ export const MemberSearchSelect = ({
       {selectedMember ? (
         <div className="flex items-center justify-between p-3 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-300 dark:border-emerald-600/40 rounded-2xl shadow-sm animate-fade-in">
           <div className="flex items-center gap-3 min-w-0">
-            {selectedMember.profileImageUrl ? (
-              <img
-                src={selectedMember.profileImageUrl}
-                alt={selectedMember.userId?.name}
-                className="w-10 h-10 rounded-xl object-cover border border-emerald-400 shrink-0"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white font-extrabold flex items-center justify-center text-sm shrink-0 shadow-sm">
-                {selectedMember.userId?.name?.charAt(0) || 'M'}
-              </div>
-            )}
+            <AvatarImage
+              src={selectedMember.profileImageUrl}
+              alt={selectedMember.userId?.name}
+              fallbackText={selectedMember.userId?.name}
+              className="w-10 h-10 rounded-xl object-cover border border-emerald-400 shrink-0 shadow-sm"
+              fallbackClassName="w-10 h-10 rounded-xl bg-emerald-600 text-white font-extrabold flex items-center justify-center text-sm shrink-0 shadow-sm"
+            />
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-extrabold text-sm text-slate-900 dark:text-white truncate">
@@ -155,17 +152,13 @@ export const MemberSearchSelect = ({
                     className="w-full text-left p-2.5 hover:bg-emerald-50 dark:hover:bg-slate-800/60 flex items-center justify-between gap-3 transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      {m.profileImageUrl ? (
-                        <img
-                          src={m.profileImageUrl}
-                          alt={m.userId?.name}
-                          className="w-8 h-8 rounded-lg object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs shrink-0">
-                          {m.userId?.name?.charAt(0) || 'M'}
-                        </div>
-                      )}
+                      <AvatarImage
+                        src={m.profileImageUrl}
+                        alt={m.userId?.name}
+                        fallbackText={m.userId?.name}
+                        className="w-8 h-8 rounded-lg object-cover shrink-0"
+                        fallbackClassName="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs shrink-0"
+                      />
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="font-extrabold text-xs text-slate-900 dark:text-white truncate">
