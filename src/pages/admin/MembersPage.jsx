@@ -11,9 +11,12 @@ import {
   Calendar,
   MoreVertical,
   Eye,
+  EyeOff,
   Edit2,
   Power,
-  Send,
+  Key,
+  Lock,
+  RefreshCw,
   Upload,
   Clock,
   CheckCircle,
@@ -33,6 +36,7 @@ import { useToast } from '../../components/common/Toast';
 const memberSchema = z.object({
   name: z.string().min(2, 'Name is required (at least 2 chars)'),
   email: z.string().email('Please enter a valid email address').toLowerCase().trim(),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional().or(z.literal('')),
   phone: z.string().min(7, 'Phone number must be at least 7 digits'),
   address: z.string().min(3, 'Address is required'),
   planId: z.string().min(1, 'Please select a membership plan'),
@@ -105,12 +109,22 @@ export const MembersPage = () => {
   const [editImagePreview, setEditImagePreview] = useState('');
   const [isUploadingEditImage, setIsUploadingEditImage] = useState(false);
 
+  // Credentials & Password Visibility states
+  const [revealedPasswords, setRevealedPasswords] = useState({});
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [memberToReset, setMemberToReset] = useState(null);
+  const [newResetPassword, setNewResetPassword] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [createdCredentials, setCreatedCredentials] = useState(null);
+
   // Form for Adding Member
   const {
     register,
     handleSubmit,
     reset,
     watch,
+    setValue,
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(memberSchema),
@@ -220,17 +234,27 @@ export const MembersPage = () => {
     try {
       const payload = {
         ...data,
+        password: data.password ? data.password.trim() : undefined,
         profileImageUrl: uploadedImageUrl || undefined
       };
 
       const res = await api.post('/members', payload);
       toastSuccess('Member Created!', res.data?.message || 'Member added successfully');
 
-      if (res.data?.data?.invitation?.oneTimeCredentialPreview) {
-        toastInfo(
-          'One-Time Credential (Preview)',
-          `Code: ${res.data.data.invitation.oneTimeCredentialPreview}`
-        );
+      const createdMember = res.data?.data?.member;
+      const effectivePassword =
+        res.data?.data?.credentials?.password ||
+        res.data?.data?.invitation?.password ||
+        res.data?.data?.invitation?.oneTimeCredentialPreview ||
+        createdMember?.visiblePassword;
+
+      if (effectivePassword) {
+        setCreatedCredentials({
+          name: data.name,
+          memberId: createdMember?.memberId || 'Pending',
+          email: data.email,
+          password: effectivePassword
+        });
       }
 
       setIsAddModalOpen(false);
@@ -334,24 +358,61 @@ export const MembersPage = () => {
     }
   };
 
-  // Resend Member Invitation
-  const handleResendInvitation = async (member) => {
+  // Password & Credential Handlers
+  const togglePasswordVisibility = (id) => {
+    setRevealedPasswords((prev) => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const copyToClipboard = (text, key) => {
+    if (!text) return;
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    toastSuccess('Copied to clipboard!', text);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleOpenResetPassword = (member) => {
+    setMemberToReset(member);
+    setNewResetPassword(`Ashifit@${Math.floor(1000 + Math.random() * 9000)}`);
+    setIsResetPasswordModalOpen(true);
+  };
+
+  const handleConfirmResetPassword = async () => {
+    if (!memberToReset || !newResetPassword || newResetPassword.trim().length < 6) {
+      toastError('Validation Error', 'Password must be at least 6 characters');
+      return;
+    }
+    setIsResettingPassword(true);
     try {
-      const res = await api.post(`/members/${member._id}/resend-invite`);
-      if (res.data?.data?.emailDeliveryFailed) {
-        toastError('Email Notice', res.data?.message);
-      } else {
-        toastSuccess('Invitation Dispatched!', res.data?.message);
+      const res = await api.patch(`/members/${memberToReset._id}/password`, {
+        newPassword: newResetPassword.trim()
+      });
+      toastSuccess('Password Updated!', res.data?.message || 'Password changed successfully');
+      setIsResetPasswordModalOpen(false);
+
+      if (
+        selectedMember &&
+        (selectedMember._id === memberToReset._id || selectedMember.memberId === memberToReset.memberId)
+      ) {
+        setSelectedMember((prev) => ({
+          ...prev,
+          visiblePassword: newResetPassword.trim(),
+          userId: {
+            ...prev.userId,
+            visiblePassword: newResetPassword.trim()
+          }
+        }));
       }
-      if (res.data?.data?.oneTimeCredentialPreview) {
-        toastInfo(
-          'Login Credentials Generated',
-          `Member: ${member.userId?.name} | One-Time OTP: ${res.data.data.oneTimeCredentialPreview}`
-        );
-      }
+
+      setMemberToReset(null);
       fetchMembers(pagination.page);
     } catch (err) {
-      toastError('Failed to resend invitation', err.response?.data?.message || err.message);
+      toastError('Failed to reset password', err.response?.data?.message || err.message);
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -461,7 +522,7 @@ export const MembersPage = () => {
                 <th className="py-3.5 px-4">Contact</th>
                 <th className="py-3.5 px-4">Plan & Expiration</th>
                 <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-4">Invitation</th>
+                <th className="py-3.5 px-4">Member Password</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -531,9 +592,40 @@ export const MembersPage = () => {
                         <Badge status={m.status} />
                       </td>
 
-                      {/* Invitation Status */}
+                      {/* Member Password (Visible to Admin) */}
                       <td className="py-3.5 px-4">
-                        <Badge status={m.invitationStatus} />
+                        {m.visiblePassword || m.userId?.visiblePassword ? (
+                          <div className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-800">
+                            <Lock className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                            <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 select-all">
+                              {revealedPasswords[m._id]
+                                ? m.visiblePassword || m.userId?.visiblePassword
+                                : '••••••••'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => togglePasswordVisibility(m._id)}
+                              className="p-0.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                              title={revealedPasswords[m._id] ? 'Hide password' : 'Show password'}
+                            >
+                              {revealedPasswords[m._id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(m.visiblePassword || m.userId?.visiblePassword, m._id)}
+                              className="p-0.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+                              title="Copy password to clipboard"
+                            >
+                              {copiedKey === m._id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 text-xs italic">Set via Reset</span>
+                        )}
                       </td>
 
                       {/* Action Buttons */}
@@ -556,11 +648,11 @@ export const MembersPage = () => {
                           </button>
 
                           <button
-                            onClick={() => handleResendInvitation(m)}
-                            className="p-1.5 bg-yellow-400/20 hover:bg-yellow-400/30 text-yellow-800 dark:text-yellow-400 border border-yellow-500/30 rounded-lg transition-colors cursor-pointer"
-                            title="Resend invitation email & password setup link"
+                            onClick={() => handleOpenResetPassword(m)}
+                            className="p-1.5 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-800/60 rounded-lg transition-colors cursor-pointer"
+                            title="Reset member password directly"
                           >
-                            <Send className="w-3.5 h-3.5" />
+                            <Key className="w-3.5 h-3.5" />
                           </button>
 
                           <button
@@ -638,7 +730,35 @@ export const MembersPage = () => {
                     <div>
                       <span className="text-[10px] text-slate-400 uppercase font-bold block">Plan ({planName})</span>
                       <p className="font-medium text-emerald-600 dark:text-emerald-400 text-[11px]">Exp: {endDate}</p>
-                      <div className="mt-1"><Badge status={m.invitationStatus} /></div>
+                      <div className="mt-1 flex items-center justify-between bg-white dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800">
+                        <span className="font-mono text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                          {revealedPasswords[m._id]
+                            ? m.visiblePassword || m.userId?.visiblePassword
+                            : '••••••••'}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(m._id)}
+                            className="p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            title={revealedPasswords[m._id] ? 'Hide' : 'Show'}
+                          >
+                            {revealedPasswords[m._id] ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(m.visiblePassword || m.userId?.visiblePassword, m._id)}
+                            className="p-0.5 text-slate-400 hover:text-emerald-500"
+                            title="Copy Password"
+                          >
+                            {copiedKey === m._id ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
@@ -658,11 +778,11 @@ export const MembersPage = () => {
                       <span>Edit</span>
                     </button>
                     <button
-                      onClick={() => handleResendInvitation(m)}
-                      className="p-2 bg-yellow-400/20 text-yellow-800 dark:text-yellow-400 border border-yellow-500/30 rounded-lg"
-                      title="Resend invitation email"
+                      onClick={() => handleOpenResetPassword(m)}
+                      className="p-2 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800/60 rounded-lg"
+                      title="Reset Password"
                     >
-                      <Send className="w-3.5 h-3.5" />
+                      <Key className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleToggleStatus(m)}
@@ -776,6 +896,30 @@ export const MembersPage = () => {
                 className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:border-emerald-500"
               />
               {errors.email && <p className="text-xs text-rose-500 mt-1">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Member Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setValue('password', `Ashifit@${Math.floor(1000 + Math.random() * 9000)}`)}
+                  className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>Auto-Generate</span>
+                </button>
+              </div>
+              <input
+                type="text"
+                {...register('password')}
+                placeholder="e.g. Ashifit@2026 (or click Auto-Generate)"
+                className="w-full px-3.5 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:border-emerald-500 font-mono"
+              />
+              {errors.password && <p className="text-xs text-rose-500 mt-1">{errors.password.message}</p>}
+              <p className="text-[10px] text-slate-500 mt-1">Leave blank to auto-generate a secure password.</p>
             </div>
 
             <div>
@@ -916,7 +1060,7 @@ export const MembersPage = () => {
               disabled={isSubmitting || isUploadingImage}
               className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer"
             >
-              {isSubmitting ? 'Creating Member & Sending Invite...' : 'Register Member & Dispatch Invitation'}
+              {isSubmitting ? 'Registering Member...' : 'Register Member & Create Account'}
             </button>
           </div>
         </form>
@@ -1005,27 +1149,108 @@ export const MembersPage = () => {
 
             {/* Tab Contents */}
             {detailTab === 'profile' && (
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-400 uppercase text-[10px] font-bold">Address</span>
-                  <p className="text-slate-900 dark:text-slate-200 mt-1 font-medium">{selectedMember.address}</p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-400 uppercase text-[10px] font-bold">Emergency Contact</span>
-                  <p className="text-slate-900 dark:text-slate-200 mt-1 font-medium">
-                    {selectedMember.emergencyContact?.name || 'Not provided'}
-                    {selectedMember.emergencyContact?.phone ? ` (${selectedMember.emergencyContact.phone})` : ''}
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-400 uppercase text-[10px] font-bold">Invitation Status</span>
-                  <div className="mt-1">
-                    <Badge status={selectedMember.invitationStatus} />
+              <div className="space-y-4 text-xs">
+                {/* Member Login Credentials Card */}
+                <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/25 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span className="text-emerald-900 dark:text-emerald-200 uppercase text-[11px] font-black tracking-wider">
+                        Member Login Credentials
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenResetPassword(selectedMember)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow-sm transition-all cursor-pointer"
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                      <span>Reset Password</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Email Address</span>
+                        <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 select-all">
+                          {selectedMember.userId?.email}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(selectedMember.userId?.email, `detail-email-${selectedMember._id}`)}
+                        className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+                        title="Copy Email"
+                      >
+                        {copiedKey === `detail-email-${selectedMember._id}` ? (
+                          <Check className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Member Password</span>
+                        <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200 select-all">
+                          {revealedPasswords[`detail-${selectedMember._id}`]
+                            ? selectedMember.visiblePassword || selectedMember.userId?.visiblePassword || 'Not Set'
+                            : '••••••••••••'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => togglePasswordVisibility(`detail-${selectedMember._id}`)}
+                          className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                          title={revealedPasswords[`detail-${selectedMember._id}`] ? 'Hide Password' : 'Show Password'}
+                        >
+                          {revealedPasswords[`detail-${selectedMember._id}`] ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            copyToClipboard(
+                              selectedMember.visiblePassword || selectedMember.userId?.visiblePassword,
+                              `detail-pwd-${selectedMember._id}`
+                            )
+                          }
+                          className="p-1.5 text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+                          title="Copy Password"
+                        >
+                          {copiedKey === `detail-pwd-${selectedMember._id}` ? (
+                            <Check className="w-4 h-4 text-emerald-500" />
+                          ) : (
+                            <Copy className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-slate-400 uppercase text-[10px] font-bold">Medical Notes</span>
-                  <p className="text-slate-900 dark:text-slate-200 mt-1 font-medium">{selectedMember.medicalNotes || 'None recorded'}</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold">Address</span>
+                    <p className="text-slate-900 dark:text-slate-200 mt-1 font-medium">{selectedMember.address}</p>
+                  </div>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold">Emergency Contact</span>
+                    <p className="text-slate-900 dark:text-slate-200 mt-1 font-medium">
+                      {selectedMember.emergencyContact?.name || 'Not provided'}
+                      {selectedMember.emergencyContact?.phone ? ` (${selectedMember.emergencyContact.phone})` : ''}
+                    </p>
+                  </div>
+                  <div className="col-span-2 p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <span className="text-slate-400 uppercase text-[10px] font-bold">Medical Notes</span>
+                    <p className="text-slate-900 dark:text-slate-200 mt-1 font-medium">{selectedMember.medicalNotes || 'None recorded'}</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -1315,6 +1540,156 @@ export const MembersPage = () => {
               </button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* RESET PASSWORD MODAL */}
+      <Modal
+        isOpen={isResetPasswordModalOpen}
+        onClose={() => {
+          setIsResetPasswordModalOpen(false);
+          setMemberToReset(null);
+        }}
+        title={`Reset Password: ${memberToReset?.userId?.name || memberToReset?.memberId || 'Member'}`}
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Set a new login password directly for this member. The member can log in immediately using their email and this password.
+          </p>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                New Password *
+              </label>
+              <button
+                type="button"
+                onClick={() => setNewResetPassword(`Ashifit@${Math.floor(1000 + Math.random() * 9000)}`)}
+                className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline cursor-pointer flex items-center gap-1"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Auto-Generate</span>
+              </button>
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                value={newResetPassword}
+                onChange={(e) => setNewResetPassword(e.target.value)}
+                placeholder="Enter at least 6 characters"
+                className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs font-mono focus:outline-none focus:border-emerald-500 font-bold"
+              />
+            </div>
+            <p className="text-[10px] text-slate-400">
+              Current password is automatically replaced in database and immediately visible to administrators.
+            </p>
+          </div>
+
+          <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setIsResetPasswordModalOpen(false);
+                setMemberToReset(null);
+              }}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={isResettingPassword || !newResetPassword || newResetPassword.trim().length < 6}
+              onClick={handleConfirmResetPassword}
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5"
+            >
+              {isResettingPassword ? (
+                <span>Updating Password...</span>
+              ) : (
+                <>
+                  <Key className="w-3.5 h-3.5" />
+                  <span>Update Password</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* MEMBER REGISTRATION CREDENTIALS CONFIRMATION MODAL */}
+      <Modal
+        isOpen={!!createdCredentials}
+        onClose={() => setCreatedCredentials(null)}
+        title="Member Registered Successfully!"
+        maxWidth="max-w-md"
+      >
+        {createdCredentials && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+              <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <div>
+                <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-200">
+                  Account Ready for {createdCredentials.name}
+                </h4>
+                <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                  Login credentials have been created and saved. Provide these directly to the member.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 bg-slate-50 dark:bg-slate-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">Member ID</span>
+                <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400">
+                  {createdCredentials.memberId}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">Email / Username</span>
+                <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {createdCredentials.email}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
+                <span className="text-[11px] font-bold text-slate-400 uppercase">Created Password</span>
+                <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100/60 dark:bg-emerald-950/80 px-2 py-0.5 rounded select-all">
+                  {createdCredentials.password}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() =>
+                  copyToClipboard(
+                    `Ashifitness Gym Credentials:\nMember ID: ${createdCredentials.memberId}\nEmail: ${createdCredentials.email}\nPassword: ${createdCredentials.password}`,
+                    'created-cred-all'
+                  )
+                }
+                className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer"
+              >
+                {copiedKey === 'created-cred-all' ? (
+                  <>
+                    <Check className="w-4 h-4" />
+                    <span>Copied Credentials!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    <span>Copy All Credentials</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreatedCredentials(null)}
+                className="py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>
