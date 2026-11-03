@@ -421,12 +421,12 @@ export const MembersPage = () => {
         </div>
 
         {/* Filter Dropdowns */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 w-full md:w-auto">
           {/* Status Filter */}
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500 font-medium"
+            className="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500 font-medium"
           >
             <option value="">All Statuses</option>
             <option value="ACTIVE">Active</option>
@@ -438,7 +438,7 @@ export const MembersPage = () => {
           <select
             value={planFilter}
             onChange={(e) => setPlanFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500 font-medium"
+            className="w-full sm:w-auto px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500 font-medium"
           >
             <option value="">All Plans</option>
             {plans.map((p) => (
@@ -452,7 +452,8 @@ export const MembersPage = () => {
 
       {/* Members Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-950/80 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 uppercase text-[11px]">
               <tr>
@@ -496,6 +497,7 @@ export const MembersPage = () => {
                               src={m.profileImageUrl}
                               alt={m.userId?.name}
                               className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                              loading="lazy"
                             />
                           ) : (
                             <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs border border-emerald-200 dark:border-emerald-800">
@@ -581,6 +583,103 @@ export const MembersPage = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {isLoading ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 space-y-2.5">
+                <div className="h-5 bg-slate-100 dark:bg-slate-800 rounded animate-pulse w-3/4" />
+                <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded animate-pulse w-1/2" />
+              </div>
+            ))
+          ) : members.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 italic text-xs">
+              No members match your criteria
+            </div>
+          ) : (
+            members.map((m) => {
+              const planName = m.membershipId?.planId?.name || 'Standard';
+              const endDate = m.membershipId?.endDate
+                ? new Date(m.membershipId.endDate).toLocaleDateString()
+                : 'N/A';
+
+              return (
+                <div key={m._id} className="p-4 space-y-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {m.profileImageUrl ? (
+                        <img
+                          src={m.profileImageUrl}
+                          alt={m.userId?.name}
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold flex items-center justify-center text-xs border border-emerald-200 dark:border-emerald-800">
+                          {m.userId?.name?.charAt(0) || 'M'}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-bold text-slate-900 dark:text-white text-sm">{m.userId?.name}</p>
+                        <p className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{m.memberId}</p>
+                      </div>
+                    </div>
+                    <Badge status={m.status} />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Contact</span>
+                      <p className="truncate font-medium">{m.phone}</p>
+                      <p className="truncate text-[11px] text-slate-400">{m.userId?.email}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">Plan ({planName})</span>
+                      <p className="font-medium text-emerald-600 dark:text-emerald-400 text-[11px]">Exp: {endDate}</p>
+                      <div className="mt-1"><Badge status={m.invitationStatus} /></div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
+                    <button
+                      onClick={() => openMemberDetails(m)}
+                      className="flex-1 py-2 px-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg text-xs font-bold flex items-center justify-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Details</span>
+                    </button>
+                    <button
+                      onClick={() => openEditModal(m)}
+                      className="py-2 px-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800/60 rounded-lg text-xs font-bold flex items-center gap-1"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => handleResendInvitation(m)}
+                      className="p-2 bg-yellow-400/20 text-yellow-800 dark:text-yellow-400 border border-yellow-500/30 rounded-lg"
+                      title="Resend invitation email"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleToggleStatus(m)}
+                      disabled={statusTogglingId === m._id}
+                      className={`p-2 rounded-lg border ${
+                        m.status === 'ACTIVE'
+                          ? 'bg-rose-50 text-rose-600 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800/40'
+                          : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40'
+                      }`}
+                    >
+                      <Power className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Server-Side Pagination Bar */}

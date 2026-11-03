@@ -2,10 +2,10 @@ import React from 'react';
 import { Printer, CheckCircle, ShieldCheck, Dumbbell } from 'lucide-react';
 
 export const PrintableReceipt = ({ payment, settings, onClose }) => {
-  const gymName = settings?.gymName || 'IronPulse Fitness & Gym';
+  const gymName = settings?.gymName || 'Ashifitness Gym';
   const logoUrl = settings?.logoUrl || '';
   const currencySymbol = settings?.currencySymbol || '₹';
-  const receiptFooter = settings?.receiptFooter || 'Thank you for choosing IronPulse Gym. Train hard!';
+  const receiptFooter = settings?.receiptFooter || 'Thank you for choosing Ashifitness Gym. Train hard!';
 
   const formattedDate = new Date(payment.paymentDate).toLocaleDateString('en-US', {
     year: 'numeric',

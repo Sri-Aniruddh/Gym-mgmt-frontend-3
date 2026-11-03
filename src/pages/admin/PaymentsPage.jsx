@@ -192,14 +192,14 @@ export const PaymentsPage = () => {
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full md:w-auto">
           {/* Method Filter */}
           <select
             value={methodFilter}
             onChange={(e) => setMethodFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500 font-medium"
+            className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500 font-medium"
           >
-            <option value="">All Payment Methods</option>
+            <option value="">All Methods</option>
             <option value="CASH">Cash</option>
             <option value="UPI">UPI</option>
             <option value="CARD">Debit / Credit Card</option>
@@ -212,15 +212,14 @@ export const PaymentsPage = () => {
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500"
             title="Start date"
           />
-          <span className="text-slate-400 text-xs">to</span>
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500"
+            className="w-full px-3 py-1.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:border-emerald-500"
             title="End date"
           />
         </div>
@@ -228,7 +227,8 @@ export const PaymentsPage = () => {
 
       {/* Payments Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-950/80 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 uppercase text-[11px]">
               <tr>
@@ -310,6 +310,61 @@ export const PaymentsPage = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {isLoading ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 space-y-2">
+                <div className="h-5 bg-slate-100 dark:bg-slate-800 rounded animate-pulse w-3/4" />
+                <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded animate-pulse w-1/2" />
+              </div>
+            ))
+          ) : payments.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 italic text-xs">
+              No payment records found
+            </div>
+          ) : (
+            payments.map((p) => (
+              <div key={p._id} className="p-4 space-y-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">
+                      {p.memberRef?.userId?.name || 'Gym Member'}
+                    </p>
+                    <p className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{p.memberId}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-sm text-emerald-600 dark:text-emerald-400">
+                      {currencySymbol}{p.amount.toFixed(2)}
+                    </p>
+                    <Badge status={p.status} />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-500 bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <span className="font-mono text-[10px] text-slate-400 block truncate max-w-[150px]">Ref: {p.transactionReference}</span>
+                    <span className="text-[11px] text-slate-600 dark:text-slate-300 font-medium">Method: {p.paymentMethod}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[11px] text-slate-500">{new Date(p.paymentDate).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <button
+                    onClick={() => setSelectedReceiptPayment(p)}
+                    className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>View & Print Receipt</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Pagination Bar */}

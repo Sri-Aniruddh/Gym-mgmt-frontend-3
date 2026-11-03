@@ -85,12 +85,12 @@ export const LoginPage = () => {
             <Dumbbell className="w-7 h-7 text-white" />
           </div>
           <div className="flex items-center justify-center gap-2">
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">Gym Fitness Portal</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Ashifitness Gym</h1>
             <span className="px-2 py-0.5 text-[10px] font-extrabold bg-yellow-400 text-slate-950 rounded uppercase tracking-wider">
               PRO
             </span>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Gym Management & Member Portal</p>
+          <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1">Ashifitness Management & Member Portal</p>
         </div>
 
         {/* Generic Entrance QR Shortcut Card */}

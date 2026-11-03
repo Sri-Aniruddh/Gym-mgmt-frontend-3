@@ -66,13 +66,13 @@ export const SettingsPage = () => {
         if (res.data?.data) {
           const s = res.data.data;
           reset({
-            gymName: s.gymName || 'IronPulse Fitness & Gym',
-            contactEmail: s.contactEmail || 'contact@ironpulsefitness.com',
-            contactPhone: s.contactPhone || '+1 (555) 839-2041',
-            address: s.address || '742 Evergreen Fitness Way, Metropolis',
+            gymName: s.gymName || 'Ashifitness Gym',
+            contactEmail: s.contactEmail || 'ashifit7@gmail.com',
+            contactPhone: s.contactPhone || '+91 9876543210',
+            address: s.address || 'Ashifitness Gym, City Center',
             currency: s.currency || 'INR',
             currencySymbol: s.currencySymbol || '₹',
-            receiptFooter: s.receiptFooter || 'Thank you for choosing IronPulse Gym. Strive for greatness!',
+            receiptFooter: s.receiptFooter || 'Thank you for choosing Ashifitness Gym. Strive for greatness!',
             logoUrl: s.logoUrl || ''
           });
           setPreviewLogo(s.logoUrl || '');
@@ -237,7 +237,7 @@ export const SettingsPage = () => {
               <input
                 type="text"
                 {...register('gymName')}
-                placeholder="e.g. IronPulse Fitness & Gym"
+                placeholder="e.g. Ashifitness Gym"
                 className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-xs focus:outline-none focus:border-emerald-500 font-semibold"
               />
               {errors.gymName && <p className="text-xs text-rose-500 mt-1">{errors.gymName.message}</p>}

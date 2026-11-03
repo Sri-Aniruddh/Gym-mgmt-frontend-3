@@ -148,7 +148,7 @@ export const AdminDashboardPage = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
             onClick={fetchDashboardData}
             className="p-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl border border-slate-200 dark:border-slate-800 transition-colors cursor-pointer shadow-sm"
@@ -159,7 +159,7 @@ export const AdminDashboardPage = () => {
           <Link
             to="/check-in"
             target="_blank"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-sm transition-all"
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-yellow-400 hover:bg-yellow-500 text-slate-950 font-extrabold rounded-xl text-xs shadow-sm transition-all"
             title="Open Public Entrance Check-In QR page"
           >
             <QrCode className="w-4 h-4" />
@@ -167,14 +167,14 @@ export const AdminDashboardPage = () => {
           </Link>
           <Link
             to="/admin/members"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Add Member</span>
           </Link>
           <Link
             to="/admin/payments"
-            className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-bold rounded-xl text-xs border border-slate-200 dark:border-slate-700 transition-all"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-slate-100 font-bold rounded-xl text-xs border border-slate-200 dark:border-slate-700 transition-all"
           >
             <CreditCard className="w-4 h-4" />
             <span>Record Payment</span>
@@ -183,7 +183,7 @@ export const AdminDashboardPage = () => {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {statCards.map((stat, i) => {
           const Icon = stat.icon;
           return (

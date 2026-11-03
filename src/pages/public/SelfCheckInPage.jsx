@@ -105,7 +105,7 @@ export const SelfCheckInPage = () => {
             </div>
           )}
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-            {gymSettings?.gymName || 'IronPulse Fitness'}
+            {gymSettings?.gymName || 'Ashifitness Gym'}
           </h1>
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30 text-xs font-bold mt-1.5 uppercase tracking-wider">
             <QrCode className="w-3.5 h-3.5" />

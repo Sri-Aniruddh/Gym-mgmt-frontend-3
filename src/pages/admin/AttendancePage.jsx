@@ -100,7 +100,7 @@ export const AttendancePage = () => {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${gymSettings?.gymName || 'IronPulse Fitness'} - Entrance Attendance QR</title>
+          <title>${gymSettings?.gymName || 'Ashifitness Gym'} - Entrance Attendance QR</title>
           <style>
             @page { size: A4 portrait; margin: 15mm; }
             body {
@@ -184,7 +184,7 @@ export const AttendancePage = () => {
         <body>
           <div class="container">
             <span class="badge">Gym Entrance Check-In</span>
-            <h1>${gymSettings?.gymName || 'IronPulse Fitness'}</h1>
+            <h1>${gymSettings?.gymName || 'Ashifitness Gym'}</h1>
             <p class="sub">Scan with any phone camera or QR reader to record your attendance</p>
 
             <div class="qr-box">
@@ -202,7 +202,7 @@ export const AttendancePage = () => {
             </div>
 
             <div class="footer">
-              ${gymSettings?.address || 'IronPulse Fitness & Health Club'} &bull; Powered by IronPulse Gym Management
+              ${gymSettings?.address || 'Ashifitness Gym'} &bull; Powered by Ashifitness Gym Management
             </div>
           </div>
           <script>
@@ -406,7 +406,8 @@ export const AttendancePage = () => {
 
       {/* Attendance Table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 dark:bg-slate-950/80 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[11px]">
               <tr>
@@ -489,6 +490,68 @@ export const AttendancePage = () => {
           </table>
         </div>
 
+        {/* Mobile Card View (md:hidden) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
+          {isLoading ? (
+            [...Array(3)].map((_, i) => (
+              <div key={i} className="p-4 space-y-2">
+                <div className="h-5 bg-slate-100 dark:bg-slate-800 rounded animate-pulse w-3/4" />
+                <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded animate-pulse w-1/2" />
+              </div>
+            ))
+          ) : records.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 italic text-xs">
+              No check-in records found for this selection
+            </div>
+          ) : (
+            records.map((r) => (
+              <div key={r._id} className="p-4 space-y-2.5 hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-white text-sm">
+                      {r.memberRef?.userId?.name || 'Member'}
+                    </p>
+                    <p className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">{r.memberId}</p>
+                  </div>
+                  <Badge status={r.status} />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Check-In</span>
+                    <p className="font-bold text-emerald-600 dark:text-emerald-400">
+                      {new Date(r.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                    <span className="text-[10px] text-slate-400">{r.dateString}</span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase font-bold block">Check-Out</span>
+                    <p className="font-medium text-slate-700 dark:text-slate-300">
+                      {r.checkOutAt ? (
+                        new Date(r.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      ) : (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-semibold italic text-[11px]">In Gym</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {r.status === 'PRESENT' && (
+                  <div className="pt-1">
+                    <button
+                      onClick={() => handleCheckOut(r._id)}
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-200 dark:border-slate-700"
+                    >
+                      <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Mark Check-Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
         {/* Pagination Bar */}
         <div className="p-4 bg-slate-50 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <span>
@@ -530,7 +593,7 @@ export const AttendancePage = () => {
               Single Generic Facility QR
             </span>
             <h3 className="text-base font-extrabold text-slate-900 dark:text-white mt-1.5">
-              {gymSettings?.gymName || 'IronPulse Fitness'}
+              {gymSettings?.gymName || 'Ashifitness Gym'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               Every gym has only one QR code for member attendance. Print and mount this at your front desk or turnstile.
