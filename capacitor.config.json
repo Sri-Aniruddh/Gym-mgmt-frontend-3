@@ -1,0 +1,15 @@
+{
+  "appId": "com.ashifitness.gym",
+  "appName": "Ashifitness Gym",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "Camera": {
+      "permissionsType": "prompt"
+    }
+  }
+}
+

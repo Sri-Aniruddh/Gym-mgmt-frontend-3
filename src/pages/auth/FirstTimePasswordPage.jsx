@@ -34,7 +34,7 @@ export const FirstTimePasswordPage = () => {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
 
-  const { submitFirstTimePassword } = useAuth();
+  const { submitFirstTimePassword, firstLoginSession } = useAuth();
   const { success: toastSuccess, error: toastError } = useToast();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -52,7 +52,14 @@ export const FirstTimePasswordPage = () => {
     resolver: zodResolver(firstTimeSchema)
   });
 
-  // If opened with an invitation token in URL, verify it against the backend
+  // Redirect if no session and no token
+  useEffect(() => {
+    if (!token && !firstLoginSession?.token) {
+      navigate('/login', { replace: true });
+    }
+  }, [token, firstLoginSession, navigate]);
+
+  // If opened with a setup token in URL, verify it against the backend
   useEffect(() => {
     if (!token) return;
 
@@ -71,7 +78,7 @@ export const FirstTimePasswordPage = () => {
         if (isMounted) {
           setTokenError(
             err.response?.data?.message ||
-              'This invitation link is invalid, expired, or has already been used. Please request a new invitation.'
+              'This password setup link is invalid or has already been used. Please log in or ask the gym for a new password.'
           );
         }
       } finally {
@@ -91,7 +98,7 @@ export const FirstTimePasswordPage = () => {
     setIsSubmitting(true);
     try {
       if (token) {
-        // Direct invitation token setup flow
+        // Direct token setup flow
         await api.post('/auth/setup-password', {
           token,
           newPassword: data.newPassword
@@ -99,9 +106,9 @@ export const FirstTimePasswordPage = () => {
         toastSuccess('Password Created!', 'Your account is activated. Please sign in with your email and new password.');
         navigate('/login', { replace: true });
       } else {
-        // Logged-in one-time credential session flow
+        // First-time login password change flow
         await submitFirstTimePassword(data.newPassword);
-        toastSuccess('Account Activated!', 'Your permanent password has been set. Welcome to the gym!');
+        toastSuccess('Welcome to Ashifitness Gym!', 'Your permanent password has been set successfully.');
         navigate('/member/dashboard', { replace: true });
       }
     } catch (err) {
@@ -231,7 +238,7 @@ export const FirstTimePasswordPage = () => {
                   </p>
                   <ul className="list-disc list-inside text-[11px] space-y-0.5 pl-1">
                     <li>Minimum 8 characters</li>
-                    <li>Invitation link will be marked used immediately</li>
+                    <li>Temporary password will be replaced by your personal password</li>
                     <li>You will be able to log in anytime with this password</li>
                   </ul>
                 </div>

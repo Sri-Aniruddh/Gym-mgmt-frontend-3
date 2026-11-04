@@ -24,3 +24,11 @@ dist-ssr
 *.sw?
 
 ./env
+
+# Android & Capacitor build artifacts
+android/.gradle
+android/build
+android/app/build
+android/capacitor-android/build
+android/capacitor-cordova-android-plugins/build
+*.apk

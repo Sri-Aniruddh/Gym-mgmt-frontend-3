@@ -9,8 +9,8 @@ import { useToast } from '../../components/common/Toast';
 import { useTheme } from '../../context/ThemeContext';
 
 const loginFormSchema = z.object({
-  email: z.string().email('Please enter a valid email address').toLowerCase().trim(),
-  password: z.string().min(1, 'Password or one-time credential is required')
+  email: z.string().min(1, 'Please enter your email address or Member ID').trim(),
+  password: z.string().min(1, 'Password is required')
 });
 
 export const LoginPage = () => {
@@ -117,24 +117,24 @@ export const LoginPage = () => {
           <div className="mb-6">
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Sign In to Your Account</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Admins and Members can sign in with their email and password or one-time invitation code.
+              Sign in with your email or Member ID and your password.
             </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            {/* Email Field */}
+            {/* Email / Member ID Field */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Email Address
+                Email Address or Member ID
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   {...register('email')}
-                  placeholder="name@example.com"
+                  placeholder="e.g. alex@example.com or ASH-1001"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 />
               </div>
@@ -145,7 +145,7 @@ export const LoginPage = () => {
             <div>
               <div className="flex justify-between items-center mb-1.5">
                 <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Password / One-Time Code
+                  Password
                 </label>
                 <Link
                   to="/forgot-password"
@@ -161,7 +161,7 @@ export const LoginPage = () => {
                 <input
                   type="password"
                   {...register('password')}
-                  placeholder="Enter password or one-time code"
+                  placeholder="Enter your password"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white text-sm placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
                 />
               </div>

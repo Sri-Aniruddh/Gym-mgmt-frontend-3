@@ -482,6 +482,13 @@ export const MembersPage = () => {
         }));
       }
 
+      setCreatedCredentials({
+        name: memberToReset.userId?.name || memberToReset.name || 'Member',
+        memberId: memberToReset.memberId,
+        email: memberToReset.userId?.email || memberToReset.email,
+        password: newResetPassword.trim()
+      });
+
       setMemberToReset(null);
       fetchMembers(pagination.page);
     } catch (err) {
@@ -531,6 +538,7 @@ export const MembersPage = () => {
         <button
           onClick={() => {
             reset();
+            setValue('password', `Ashifit@${Math.floor(1000 + Math.random() * 9000)}`);
             setImagePreview('');
             setUploadedImageUrl('');
             setIsAddModalOpen(true);
@@ -1705,11 +1713,11 @@ export const MembersPage = () => {
         </div>
       </Modal>
 
-      {/* MEMBER REGISTRATION CREDENTIALS CONFIRMATION MODAL */}
+      {/* MEMBER REGISTRATION / PASSWORD CREDENTIALS CONFIRMATION MODAL */}
       <Modal
         isOpen={!!createdCredentials}
         onClose={() => setCreatedCredentials(null)}
-        title="Member Registered Successfully!"
+        title="Member Login Credentials"
         maxWidth="max-w-md"
       >
         {createdCredentials && (
@@ -1721,7 +1729,7 @@ export const MembersPage = () => {
                   Account Ready for {createdCredentials.name}
                 </h4>
                 <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                  Login credentials have been created and saved. Provide these directly to the member.
+                  Temporary password has been generated. Tell or share this directly with the member. On first login, they will set their own permanent password.
                 </p>
               </div>
             </div>
@@ -1734,13 +1742,13 @@ export const MembersPage = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">Email / Username</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase">Email / Login ID</span>
                 <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
                   {createdCredentials.email}
                 </span>
               </div>
               <div className="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-800">
-                <span className="text-[11px] font-bold text-slate-400 uppercase">Created Password</span>
+                <span className="text-[11px] font-bold text-slate-400 uppercase">Temporary Password</span>
                 <span className="font-mono text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100/60 dark:bg-emerald-950/80 px-2 py-0.5 rounded select-all">
                   {createdCredentials.password}
                 </span>
@@ -1752,7 +1760,7 @@ export const MembersPage = () => {
                 type="button"
                 onClick={() =>
                   copyToClipboard(
-                    `Ashifitness Gym Credentials:\nMember ID: ${createdCredentials.memberId}\nEmail: ${createdCredentials.email}\nPassword: ${createdCredentials.password}`,
+                    `Ashifitness Gym Login Credentials\nMember Name: ${createdCredentials.name}\nMember ID: ${createdCredentials.memberId}\nEmail: ${createdCredentials.email}\nTemporary Password: ${createdCredentials.password}\nLogin Portal: ${window.location.origin}/login\n\nPlease log in and set your personal permanent password.`,
                     'created-cred-all'
                   )
                 }
