@@ -15,11 +15,13 @@ import {
   ChevronRight,
   Sun,
   Moon,
-  QrCode
+  QrCode,
+  KeyRound
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useTheme } from '../context/ThemeContext.jsx';
 import api from '../services/api.js';
+import { AdminChangePasswordModal } from '../components/common/AdminChangePasswordModal.jsx';
 
 export const AdminLayout = () => {
   const { user, logout } = useAuth();
@@ -28,6 +30,7 @@ export const AdminLayout = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [gymSettings, setGymSettings] = useState(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -173,6 +176,15 @@ export const AdminLayout = () => {
               <p className="text-[11px] text-slate-500 truncate">{user?.email}</p>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-2 transition-all cursor-pointer shadow-sm"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Update Password</span>
+          </button>
 
           <button
             onClick={handleLogout}
@@ -326,6 +338,18 @@ export const AdminLayout = () => {
                   </div>
                 </div>
                 <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setIsPasswordModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 mb-2 transition-all cursor-pointer shadow-sm"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span>Update Password</span>
+                </button>
+
+                <button
                   onClick={handleLogout}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/20 border border-rose-200 dark:border-rose-500/20 transition-all cursor-pointer"
                 >
@@ -336,6 +360,12 @@ export const AdminLayout = () => {
             </div>
           </div>
         )}
+
+        {/* Admin Change Password Modal */}
+        <AdminChangePasswordModal
+          isOpen={isPasswordModalOpen}
+          onClose={() => setIsPasswordModalOpen(false)}
+        />
 
         {/* Page Content Viewport */}
         <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-20 lg:pb-8 overflow-y-auto">
